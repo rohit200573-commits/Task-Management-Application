@@ -95,24 +95,17 @@ Category + Confidence Score + Suggested Priority + Tags
 
 ## 📸 Screenshots
 
-> Screenshots of the live application:
+### 🌐 Render Deployment — Live Production App
+> Deployed on Render free tier with auto-deploy from GitHub
 
-### Dashboard — Dark Mode (Kanban + Analytics)
-```
-[Kanban board with 3 columns, stat cards, doughnut chart, priority bar chart]
-```
+![OrbitTask on Render](screenshots/render-deploy.png)
 
-### AI / NLP Task Categorizer
-```
-[Task creation modal showing "🤖 Category: Development (87%) — Priority: medium"]
-```
+---
 
-### List View with Overdue Highlighting
-```
-[Table view with red-highlighted overdue rows and tag chips]
-```
+### 💻 Local Dev Server — v2 with Chart.js Analytics
+> Full feature set: status doughnut chart, priority bar chart, 5 stat cards, SortableJS Kanban
 
-*Live screenshots available at the [demo link](https://orbittask-app.onrender.com)*
+![OrbitTask live server with analytics](screenshots/live-server.png)
 
 ---
 
