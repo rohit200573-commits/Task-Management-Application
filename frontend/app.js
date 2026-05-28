@@ -1,8 +1,10 @@
 // ==========================================================================
 // Application State & Configuration
 // ==========================================================================
-const API_BASE = "http://127.0.0.1:8000/api";
-const WS_BASE = "ws://127.0.0.1:8000/ws";
+// Dynamic URLs — works on localhost AND on any production host (Render, etc.)
+const API_BASE = "/api";
+const WS_PROTOCOL = window.location.protocol === "https:" ? "wss" : "ws";
+const WS_BASE = `${WS_PROTOCOL}://${window.location.host}/ws`;
 
 let state = {
     token: localStorage.getItem("token") || null,
