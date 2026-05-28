@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -25,21 +25,33 @@ class TokenData(BaseModel):
 
 # --- Task Schemas ---
 class TaskBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = None
-    status: str = "todo"  # "todo", "in_progress", "done"
-    priority: str = "medium"  # "low", "medium", "high"
-    due_date: Optional[str] = None  # YYYY-MM-DD format
+    title: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    status: str = Field("todo", pattern="^(todo|in_progress|done)$")
+    priority: str = Field("medium", pattern="^(low|medium|high)$")
+    due_date: Optional[str] = None   # YYYY-MM-DD format
+    tags: Optional[str] = None       # comma-separated e.g. "work,urgent"
+
+    @field_validator("tags")
+    @classmethod
+    def validate_tags(cls, v):
+        if v is None:
+            return v
+        parts = [t.strip() for t in v.split(",") if t.strip()]
+        if len(parts) > 8:
+            raise ValueError("Maximum 8 tags allowed")
+        return ",".join(parts)
 
 class TaskCreate(TaskBase):
     pass
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    status: Optional[str] = None
-    priority: Optional[str] = None
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, max_length=2000)
+    status: Optional[str] = Field(None, pattern="^(todo|in_progress|done)$")
+    priority: Optional[str] = Field(None, pattern="^(low|medium|high)$")
     due_date: Optional[str] = None
+    tags: Optional[str] = None
 
 class TaskResponse(TaskBase):
     id: int

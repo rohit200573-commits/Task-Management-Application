@@ -18,9 +18,10 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
     description = Column(String, nullable=True)
-    status = Column(String, default="todo", nullable=False)  # "todo", "in_progress", "done"
-    priority = Column(String, default="medium", nullable=False)  # "low", "medium", "high"
-    due_date = Column(String, nullable=True)  # Store as YYYY-MM-DD string
+    status = Column(String, default="todo", nullable=False)   # "todo", "in_progress", "done"
+    priority = Column(String, default="medium", nullable=False) # "low", "medium", "high"
+    due_date = Column(String, nullable=True)    # YYYY-MM-DD string
+    tags = Column(String, nullable=True)        # comma-separated e.g. "work,urgent,design"
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
