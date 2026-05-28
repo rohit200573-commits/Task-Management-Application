@@ -20,7 +20,33 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Task Management API", version="2.0.0")
 
 # --- Serve Frontend Static Files ---
-FRONTEND_DIR = Path(__file__).parent.parent.parent / "frontend"
+# Resolve frontend directory — works for both:
+#   Local:  python backend/run.py   → repo root → frontend/
+#   Render: rootDir=backend         → repo root → frontend/
+import os, logging
+logger = logging.getLogger("uvicorn.error")
+
+_this_dir = Path(__file__).resolve().parent        # backend/app
+_backend_dir = _this_dir.parent                    # backend
+_repo_root = _backend_dir.parent                   # repo root (local) OR Render rootDir parent
+
+# On Render with rootDir=backend, CWD is backend/, so repo root is CWD.parent
+_cwd = Path(os.getcwd()).resolve()
+for candidate in [
+    _repo_root / "frontend",          # local: T M A/frontend
+    _cwd.parent / "frontend",          # Render: /repo/frontend via CWD
+    _cwd / "../frontend",              # fallback
+]:
+    if candidate.exists():
+        FRONTEND_DIR = candidate.resolve()
+        break
+else:
+    raise RuntimeError(
+        f"Cannot find frontend/ directory. Tried repo roots: {_repo_root}, {_cwd.parent}. "
+        f"CWD={_cwd}"
+    )
+logger.info(f"Serving frontend from: {FRONTEND_DIR}")
+
 
 # CORS Setup
 app.add_middleware(
