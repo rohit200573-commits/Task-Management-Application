@@ -175,7 +175,6 @@ class TaskCategorizer:
                 max_iter=500,
                 C=1.5,
                 solver="lbfgs",
-                multi_class="multinomial",
             )),
         ])
         self._train()
@@ -202,12 +201,12 @@ class TaskCategorizer:
         confidence = float(proba[idx])
 
         return {
-            "category": category,
-            "confidence": round(confidence, 3),
-            "suggested_priority": CATEGORY_PRIORITY.get(category, "medium"),
-            "suggested_tags": CATEGORY_TAGS.get(category, []),
+            "category": str(category),
+            "confidence": round(float(confidence), 3),
+            "suggested_priority": CATEGORY_PRIORITY.get(str(category), "medium"),
+            "suggested_tags": CATEGORY_TAGS.get(str(category), []),
             "all_scores": {
-                cls: round(float(p), 3)
+                str(cls): round(float(p), 3)
                 for cls, p in zip(self.classes_, proba)
             },
         }
