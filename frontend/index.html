@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrbitTask | Modern Task Management</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Real-Time WebSocket Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- App Container -->
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="main-header">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-compass-drafting"></i>
+                </div>
+                <h1>Orbit<span>Task</span></h1>
+            </div>
+            
+            <div class="header-controls">
+                <!-- WebSocket Sync Status Indicator -->
+                <div id="connection-status" class="connection-status offline">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Disconnected</span>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+
+                <!-- User Info Panel -->
+                <div id="user-panel" class="user-panel">
+                    <!-- Dynamic: Logged out shows nothing, Logged in shows avatar & logout -->
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Screen -->
+        <main class="main-content">
+            
+            <!-- Auth Screen (Login / Register) -->
+            <section id="auth-screen" class="auth-screen">
+                <div class="auth-card glass">
+                    <div class="auth-tabs">
+                        <button id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+                        <button id="tab-register" class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+                    </div>
+                    
+                    <div class="auth-form-container">
+                        <!-- Login Form -->
+                        <form id="login-form" class="auth-form active" onsubmit="handleAuth(event, 'login')">
+                            <h2>Welcome Back</h2>
+                            <p class="subtitle">Access your personal workspace</p>
+                            
+                            <div class="input-group">
+                                <label for="login-username"><i class="fa-solid fa-user"></i> Username</label>
+                                <input type="text" id="login-username" required placeholder="Enter username" autocomplete="username">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
+                                <input type="password" id="login-password" required placeholder="Enter password" autocomplete="current-password">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </form>
+
+                        <!-- Register Form -->
+                        <form id="register-form" class="auth-form" onsubmit="handleAuth(event, 'register')">
+                            <h2>Create Account</h2>
+                            <p class="subtitle">Get started for free with OrbitTask</p>
+                            
+                            <div class="input-group">
+                                <label for="register-username"><i class="fa-solid fa-user"></i> Username</label>
+                                <input type="text" id="register-username" required placeholder="Pick a username" autocomplete="username">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="register-password"><i class="fa-solid fa-lock"></i> Password</label>
+                                <input type="password" id="register-password" required placeholder="Create a password (min 4 chars)" autocomplete="new-password">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success btn-block">
+                                <span>Register</span> <i class="fa-solid fa-user-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Screen (Authenticated App) -->
+            <section id="dashboard-screen" class="dashboard-screen hidden">
+                
+                <!-- Dashboard Analytics Bar -->
+                <div class="analytics-bar">
+                    <div class="stat-card glass" data-status="all">
+                        <div class="stat-info">
+                            <h3>Total Tasks</h3>
+                            <div id="stat-total" class="stat-number">0</div>
+                        </div>
+                        <div class="stat-icon-wrapper blue">
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card glass" data-status="todo">
+                        <div class="stat-info">
+                            <h3>To Do</h3>
+                            <div id="stat-todo" class="stat-number">0</div>
+                        </div>
+                        <div class="stat-icon-wrapper orange">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                    </div>
+
+                    <div class="stat-card glass" data-status="in_progress">
+                        <div class="stat-info">
+                            <h3>In Progress</h3>
+                            <div id="stat-in-progress" class="stat-number">0</div>
+                        </div>
+                        <div class="stat-icon-wrapper purple">
+                            <i class="fa-solid fa-spinner"></i>
+                        </div>
+                    </div>
+
+                    <div class="stat-card glass" data-status="done">
+                        <div class="stat-info">
+                            <h3>Completed</h3>
+                            <div id="stat-done" class="stat-number">0</div>
+                        </div>
+                        <div class="stat-icon-wrapper green">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls & Filters -->
+                <div class="controls-bar glass">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="search-input" placeholder="Search tasks by title or description..." oninput="handleSearchFilter()">
+                    </div>
+
+                    <div class="filter-controls">
+                        <!-- Priority Selector -->
+                        <div class="select-wrapper">
+                            <i class="fa-solid fa-arrow-down-up-across-line"></i>
+                            <select id="priority-filter" onchange="handleSearchFilter()">
+                                <option value="">All Priorities</option>
+                                <option value="low">Low Priority</option>
+                                <option value="medium">Medium Priority</option>
+                                <option value="high">High Priority</option>
+                            </select>
+                        </div>
+
+                        <!-- View Toggle -->
+                        <div class="view-toggle-group">
+                            <button id="view-kanban" class="toggle-btn active" title="Kanban Board" onclick="setViewMode('kanban')">
+                                <i class="fa-solid fa-table-columns"></i> Kanban
+                            </button>
+                            <button id="view-list" class="toggle-btn" title="List View" onclick="setViewMode('list')">
+                                <i class="fa-solid fa-bars"></i> List
+                            </button>
+                        </div>
+
+                        <!-- Add Task Action -->
+                        <button class="btn btn-primary" onclick="openTaskModal()">
+                            <i class="fa-solid fa-plus"></i> <span>Add Task</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Views Container -->
+                <div class="views-container">
+                    
+                    <!-- View: Kanban Board -->
+                    <div id="kanban-view" class="view-section active">
+                        <div class="kanban-board">
+                            <!-- Todo Column -->
+                            <div class="kanban-column" id="col-todo" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'todo')">
+                                <div class="column-header">
+                                    <div class="col-title">
+                                        <span class="col-indicator orange"></span>
+                                        <h2>To Do</h2>
+                                    </div>
+                                    <span id="badge-todo" class="count-badge">0</span>
+                                </div>
+                                <div class="column-cards-container" id="cards-todo">
+                                    <!-- Dynamic Cards -->
+                                </div>
+                            </div>
+
+                            <!-- In Progress Column -->
+                            <div class="kanban-column" id="col-in_progress" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'in_progress')">
+                                <div class="column-header">
+                                    <div class="col-title">
+                                        <span class="col-indicator purple"></span>
+                                        <h2>In Progress</h2>
+                                    </div>
+                                    <span id="badge-in-progress" class="count-badge">0</span>
+                                </div>
+                                <div class="column-cards-container" id="cards-in_progress">
+                                    <!-- Dynamic Cards -->
+                                </div>
+                            </div>
+
+                            <!-- Done Column -->
+                            <div class="kanban-column" id="col-done" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'done')">
+                                <div class="column-header">
+                                    <div class="col-title">
+                                        <span class="col-indicator green"></span>
+                                        <h2>Completed</h2>
+                                    </div>
+                                    <span id="badge-done" class="count-badge">0</span>
+                                </div>
+                                <div class="column-cards-container" id="cards-done">
+                                    <!-- Dynamic Cards -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View: List View -->
+                    <div id="list-view" class="view-section hidden">
+                        <div class="list-container glass">
+                            <table class="list-table">
+                                <thead>
+                                    <tr>
+                                        <th>Task Details</th>
+                                        <th>Status</th>
+                                        <th>Priority</th>
+                                        <th>Due Date</th>
+                                        <th class="actions-col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="list-tbody">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Create / Edit Task Modal -->
+    <div id="task-modal" class="modal-overlay hidden" onclick="handleOutsideModalClick(event)">
+        <div class="modal-card glass animate-scale-up">
+            <div class="modal-header">
+                <h2 id="modal-title">Create New Task</h2>
+                <button class="close-btn" onclick="closeTaskModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form id="task-form" onsubmit="handleTaskSubmit(event)">
+                <input type="hidden" id="task-id-input">
+                
+                <div class="input-group">
+                    <label for="task-title"><i class="fa-solid fa-heading"></i> Task Title</label>
+                    <input type="text" id="task-title" required placeholder="E.g., Design UI layout">
+                </div>
+
+                <div class="input-group">
+                    <label for="task-description"><i class="fa-solid fa-align-left"></i> Description</label>
+                    <textarea id="task-description" placeholder="Describe the requirements or goals..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="input-group flex-1">
+                        <label for="task-status"><i class="fa-solid fa-chart-line"></i> Status</label>
+                        <select id="task-status" required>
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="done">Completed</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group flex-1">
+                        <label for="task-priority"><i class="fa-solid fa-triangle-exclamation"></i> Priority</label>
+                        <select id="task-priority" required>
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="task-due-date"><i class="fa-solid fa-calendar-days"></i> Due Date</label>
+                    <input type="date" id="task-due-date">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
+                    <button type="submit" id="task-submit-btn" class="btn btn-primary">Create Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
