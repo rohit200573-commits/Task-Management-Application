@@ -1,11 +1,19 @@
 services:
   - type: web
-    name: task-management-app
+    name: orbittask-app
     runtime: python
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --app-dir backend
     envVars:
       - key: JWT_SECRET_KEY
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orbittask-db
+          property: connectionString
       - key: PYTHON_VERSION
         value: 3.11.0
+
+databases:
+  - name: orbittask-db
+    plan: free
