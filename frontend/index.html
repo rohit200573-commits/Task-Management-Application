@@ -3,22 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OrbitTask | Modern Task Management</title>
-    <!-- Google Fonts: Inter & Outfit -->
+    <title>OrbitTask | Smart Task Management</title>
+    <meta name="description" content="OrbitTask — AI-powered task management with real-time sync, Kanban boards, analytics, and smart priority suggestions.">
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <!-- FontAwesome for Icons -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SortableJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Real-Time WebSocket Toast Notifications -->
+
+    <!-- Cold-Start Loading Overlay (Render free tier wake-up) -->
+    <div id="cold-start-overlay" class="cold-start-overlay">
+        <div class="cold-start-logo"><i class="fa-solid fa-compass-drafting"></i></div>
+        <div class="cold-start-title">OrbitTask</div>
+        <div class="cold-start-sub">Starting server, please wait a moment…</div>
+        <div class="cold-start-progress"><div class="cold-start-bar"></div></div>
+    </div>
+
+    <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
+
+    <!-- User Profile Modal -->
+    <div id="profile-modal" class="profile-modal-overlay hidden" onclick="closeProfileModal(event)">
+        <div class="profile-modal-card glass animate-scale-up">
+            <div class="profile-modal-header">
+                <div id="profile-avatar-large" class="profile-avatar-large"></div>
+                <div>
+                    <h2 id="profile-username"></h2>
+                    <p class="profile-subtitle">Task Workspace</p>
+                </div>
+                <button class="close-btn" onclick="closeProfileModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="profile-stats-grid">
+                <div class="profile-stat-box">
+                    <span id="ps-total" class="ps-number">0</span>
+                    <span class="ps-label">Total Tasks</span>
+                </div>
+                <div class="profile-stat-box">
+                    <span id="ps-done" class="ps-number green">0</span>
+                    <span class="ps-label">Completed</span>
+                </div>
+                <div class="profile-stat-box">
+                    <span id="ps-overdue" class="ps-number red">0</span>
+                    <span class="ps-label">Overdue</span>
+                </div>
+                <div class="profile-stat-box">
+                    <span id="ps-completion" class="ps-number purple">0%</span>
+                    <span class="ps-label">Completion Rate</span>
+                </div>
+            </div>
+            <div class="profile-priority-bar">
+                <span class="pbar-label">Priority Breakdown</span>
+                <div class="pbar-row">
+                    <span class="pbar-tag high">High <span id="ps-high">0</span></span>
+                    <span class="pbar-tag medium">Med <span id="ps-medium">0</span></span>
+                    <span class="pbar-tag low">Low <span id="ps-low">0</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- App Container -->
     <div class="app-container">
-        
+
         <!-- Header -->
         <header class="main-header">
             <div class="logo-section">
@@ -27,53 +81,59 @@
                 </div>
                 <h1>Orbit<span>Task</span></h1>
             </div>
-            
+
             <div class="header-controls">
-                <!-- WebSocket Sync Status Indicator -->
+                <!-- WebSocket Status -->
                 <div id="connection-status" class="connection-status offline">
                     <span class="status-dot"></span>
                     <span class="status-text">Disconnected</span>
                 </div>
+
+                <!-- Notification Bell -->
+                <button id="notif-btn" class="icon-btn notif-btn hidden" title="Enable Notifications" onclick="requestNotificationPermission()">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="notif-badge" class="notif-badge hidden">0</span>
+                </button>
 
                 <!-- Theme Toggle -->
                 <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
                     <i class="fa-solid fa-moon"></i>
                 </button>
 
-                <!-- User Info Panel -->
-                <div id="user-panel" class="user-panel">
-                    <!-- Dynamic: Logged out shows nothing, Logged in shows avatar & logout -->
-                </div>
+                <!-- User Panel -->
+                <div id="user-panel" class="user-panel"></div>
             </div>
         </header>
 
-        <!-- Main Screen -->
+        <!-- Main Content -->
         <main class="main-content">
-            
-            <!-- Auth Screen (Login / Register) -->
+
+            <!-- Auth Screen -->
             <section id="auth-screen" class="auth-screen">
                 <div class="auth-card glass">
                     <div class="auth-tabs">
                         <button id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
                         <button id="tab-register" class="auth-tab" onclick="switchAuthTab('register')">Register</button>
                     </div>
-                    
+
                     <div class="auth-form-container">
                         <!-- Login Form -->
                         <form id="login-form" class="auth-form active" onsubmit="handleAuth(event, 'login')">
                             <h2>Welcome Back</h2>
                             <p class="subtitle">Access your personal workspace</p>
-                            
+
                             <div class="input-group">
                                 <label for="login-username"><i class="fa-solid fa-user"></i> Username</label>
-                                <input type="text" id="login-username" required placeholder="Enter username" autocomplete="username">
+                                <input type="text" id="login-username" required placeholder="Enter username" autocomplete="username" oninput="clearFieldError(this)">
+                                <span class="field-error" id="err-login-username"></span>
                             </div>
-                            
+
                             <div class="input-group">
                                 <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
-                                <input type="password" id="login-password" required placeholder="Enter password" autocomplete="current-password">
+                                <input type="password" id="login-password" required placeholder="Enter password" autocomplete="current-password" oninput="clearFieldError(this)">
+                                <span class="field-error" id="err-login-password"></span>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary btn-block">
                                 <span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>
                             </button>
@@ -83,17 +143,19 @@
                         <form id="register-form" class="auth-form" onsubmit="handleAuth(event, 'register')">
                             <h2>Create Account</h2>
                             <p class="subtitle">Get started for free with OrbitTask</p>
-                            
+
                             <div class="input-group">
                                 <label for="register-username"><i class="fa-solid fa-user"></i> Username</label>
-                                <input type="text" id="register-username" required placeholder="Pick a username" autocomplete="username">
+                                <input type="text" id="register-username" required placeholder="Min 3 characters" autocomplete="username" oninput="validateRegisterUsername(this)">
+                                <span class="field-error" id="err-register-username"></span>
                             </div>
-                            
+
                             <div class="input-group">
                                 <label for="register-password"><i class="fa-solid fa-lock"></i> Password</label>
-                                <input type="password" id="register-password" required placeholder="Create a password (min 4 chars)" autocomplete="new-password">
+                                <input type="password" id="register-password" required placeholder="Min 4 characters" autocomplete="new-password" oninput="validateRegisterPassword(this)">
+                                <span class="field-error" id="err-register-password"></span>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-success btn-block">
                                 <span>Register</span> <i class="fa-solid fa-user-plus"></i>
                             </button>
@@ -102,68 +164,91 @@
                 </div>
             </section>
 
-            <!-- Dashboard Screen (Authenticated App) -->
+            <!-- Dashboard Screen -->
             <section id="dashboard-screen" class="dashboard-screen hidden">
-                
-                <!-- Dashboard Analytics Bar -->
+
+                <!-- Analytics Bar -->
                 <div class="analytics-bar">
-                    <div class="stat-card glass" data-status="all">
+                    <div class="stat-card glass" id="stat-card-total" onclick="filterByStatus('')">
                         <div class="stat-info">
                             <h3>Total Tasks</h3>
                             <div id="stat-total" class="stat-number">0</div>
                         </div>
-                        <div class="stat-icon-wrapper blue">
-                            <i class="fa-solid fa-list-check"></i>
-                        </div>
+                        <div class="stat-icon-wrapper blue"><i class="fa-solid fa-list-check"></i></div>
                     </div>
-                    
-                    <div class="stat-card glass" data-status="todo">
+                    <div class="stat-card glass" id="stat-card-todo" onclick="filterByStatus('todo')">
                         <div class="stat-info">
                             <h3>To Do</h3>
                             <div id="stat-todo" class="stat-number">0</div>
                         </div>
-                        <div class="stat-icon-wrapper orange">
-                            <i class="fa-solid fa-clock"></i>
-                        </div>
+                        <div class="stat-icon-wrapper orange"><i class="fa-solid fa-clock"></i></div>
                     </div>
-
-                    <div class="stat-card glass" data-status="in_progress">
+                    <div class="stat-card glass" id="stat-card-progress" onclick="filterByStatus('in_progress')">
                         <div class="stat-info">
                             <h3>In Progress</h3>
                             <div id="stat-in-progress" class="stat-number">0</div>
                         </div>
-                        <div class="stat-icon-wrapper purple">
-                            <i class="fa-solid fa-spinner"></i>
-                        </div>
+                        <div class="stat-icon-wrapper purple"><i class="fa-solid fa-spinner"></i></div>
                     </div>
-
-                    <div class="stat-card glass" data-status="done">
+                    <div class="stat-card glass" id="stat-card-done" onclick="filterByStatus('done')">
                         <div class="stat-info">
                             <h3>Completed</h3>
                             <div id="stat-done" class="stat-number">0</div>
                         </div>
-                        <div class="stat-icon-wrapper green">
-                            <i class="fa-solid fa-circle-check"></i>
+                        <div class="stat-icon-wrapper green"><i class="fa-solid fa-circle-check"></i></div>
+                    </div>
+                    <div class="stat-card glass overdue-stat" id="stat-card-overdue">
+                        <div class="stat-info">
+                            <h3>Overdue</h3>
+                            <div id="stat-overdue" class="stat-number red">0</div>
+                        </div>
+                        <div class="stat-icon-wrapper red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    </div>
+                </div>
+
+                <!-- Chart Row -->
+                <div class="chart-row">
+                    <div class="chart-card glass">
+                        <h3 class="chart-title"><i class="fa-solid fa-chart-pie"></i> Status Overview</h3>
+                        <div class="chart-container">
+                            <canvas id="status-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card glass">
+                        <h3 class="chart-title"><i class="fa-solid fa-chart-bar"></i> Priority Breakdown</h3>
+                        <div class="chart-container">
+                            <canvas id="priority-chart"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- Controls & Filters -->
+                <!-- Controls Bar -->
                 <div class="controls-bar glass">
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                        <input type="text" id="search-input" placeholder="Search tasks by title or description..." oninput="handleSearchFilter()">
+                        <input type="text" id="search-input" placeholder="Search tasks, tags, descriptions..." oninput="handleSearchFilter()">
                     </div>
 
                     <div class="filter-controls">
-                        <!-- Priority Selector -->
+                        <!-- Priority Filter -->
                         <div class="select-wrapper">
-                            <i class="fa-solid fa-arrow-down-up-across-line"></i>
+                            <i class="fa-solid fa-flag"></i>
                             <select id="priority-filter" onchange="handleSearchFilter()">
                                 <option value="">All Priorities</option>
-                                <option value="low">Low Priority</option>
-                                <option value="medium">Medium Priority</option>
-                                <option value="high">High Priority</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort By -->
+                        <div class="select-wrapper">
+                            <i class="fa-solid fa-arrow-down-wide-short"></i>
+                            <select id="sort-by" onchange="handleSearchFilter()">
+                                <option value="created_at">Newest First</option>
+                                <option value="due_date">Due Date</option>
+                                <option value="priority">Priority</option>
+                                <option value="title">Title A–Z</option>
                             </select>
                         </div>
 
@@ -177,21 +262,28 @@
                             </button>
                         </div>
 
-                        <!-- Add Task Action -->
+                        <!-- Add Task -->
                         <button class="btn btn-primary" onclick="openTaskModal()">
                             <i class="fa-solid fa-plus"></i> <span>Add Task</span>
                         </button>
                     </div>
                 </div>
 
+                <!-- Active Tag Filters -->
+                <div id="tag-filter-bar" class="tag-filter-bar hidden">
+                    <span class="tag-filter-label"><i class="fa-solid fa-tag"></i> Tag:</span>
+                    <span id="active-tag-chip" class="tag-chip active-filter"></span>
+                    <button class="tag-clear-btn" onclick="clearTagFilter()"><i class="fa-solid fa-xmark"></i> Clear</button>
+                </div>
+
                 <!-- Views Container -->
                 <div class="views-container">
-                    
-                    <!-- View: Kanban Board -->
+
+                    <!-- Kanban View -->
                     <div id="kanban-view" class="view-section active">
                         <div class="kanban-board">
                             <!-- Todo Column -->
-                            <div class="kanban-column" id="col-todo" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'todo')">
+                            <div class="kanban-column" id="col-todo">
                                 <div class="column-header">
                                     <div class="col-title">
                                         <span class="col-indicator orange"></span>
@@ -199,13 +291,11 @@
                                     </div>
                                     <span id="badge-todo" class="count-badge">0</span>
                                 </div>
-                                <div class="column-cards-container" id="cards-todo">
-                                    <!-- Dynamic Cards -->
-                                </div>
+                                <div class="column-cards-container" id="cards-todo"></div>
                             </div>
 
                             <!-- In Progress Column -->
-                            <div class="kanban-column" id="col-in_progress" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'in_progress')">
+                            <div class="kanban-column" id="col-in_progress">
                                 <div class="column-header">
                                     <div class="col-title">
                                         <span class="col-indicator purple"></span>
@@ -213,13 +303,11 @@
                                     </div>
                                     <span id="badge-in-progress" class="count-badge">0</span>
                                 </div>
-                                <div class="column-cards-container" id="cards-in_progress">
-                                    <!-- Dynamic Cards -->
-                                </div>
+                                <div class="column-cards-container" id="cards-in_progress"></div>
                             </div>
 
                             <!-- Done Column -->
-                            <div class="kanban-column" id="col-done" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'done')">
+                            <div class="kanban-column" id="col-done">
                                 <div class="column-header">
                                     <div class="col-title">
                                         <span class="col-indicator green"></span>
@@ -227,34 +315,43 @@
                                     </div>
                                     <span id="badge-done" class="count-badge">0</span>
                                 </div>
-                                <div class="column-cards-container" id="cards-done">
-                                    <!-- Dynamic Cards -->
-                                </div>
+                                <div class="column-cards-container" id="cards-done"></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- View: List View -->
+                    <!-- List View -->
                     <div id="list-view" class="view-section hidden">
                         <div class="list-container glass">
                             <table class="list-table">
                                 <thead>
                                     <tr>
                                         <th>Task Details</th>
+                                        <th>Tags</th>
                                         <th>Status</th>
                                         <th>Priority</th>
                                         <th>Due Date</th>
                                         <th class="actions-col">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="list-tbody">
-                                    <!-- Dynamic Rows -->
-                                </tbody>
+                                <tbody id="list-tbody"></tbody>
                             </table>
                         </div>
                     </div>
 
                 </div>
+
+                <!-- Pagination Bar -->
+                <div id="pagination-bar" class="pagination-bar hidden">
+                    <button id="page-prev" class="page-btn" onclick="changePage(-1)">
+                        <i class="fa-solid fa-chevron-left"></i> Prev
+                    </button>
+                    <span id="page-indicator" class="page-indicator">Page 1 of 1</span>
+                    <button id="page-next" class="page-btn" onclick="changePage(1)">
+                        Next <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+
             </section>
         </main>
     </div>
@@ -266,18 +363,23 @@
                 <h2 id="modal-title">Create New Task</h2>
                 <button class="close-btn" onclick="closeTaskModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
-            <form id="task-form" onsubmit="handleTaskSubmit(event)">
+
+            <form id="task-form" onsubmit="handleTaskSubmit(event)" novalidate>
                 <input type="hidden" id="task-id-input">
-                
+
                 <div class="input-group">
-                    <label for="task-title"><i class="fa-solid fa-heading"></i> Task Title</label>
-                    <input type="text" id="task-title" required placeholder="E.g., Design UI layout">
+                    <label for="task-title"><i class="fa-solid fa-heading"></i> Task Title *</label>
+                    <input type="text" id="task-title" required placeholder="E.g., Design UI layout (min 3 chars)" oninput="onTitleInput(this)">
+                    <span class="field-error" id="err-task-title"></span>
+                    <!-- AI Suggestion Badge -->
+                    <div id="ai-suggestion" class="ai-suggestion hidden">
+                        <i class="fa-solid fa-robot"></i> <span id="ai-suggestion-text"></span>
+                    </div>
                 </div>
 
                 <div class="input-group">
                     <label for="task-description"><i class="fa-solid fa-align-left"></i> Description</label>
-                    <textarea id="task-description" placeholder="Describe the requirements or goals..."></textarea>
+                    <textarea id="task-description" placeholder="Describe the requirements or goals..." rows="3"></textarea>
                 </div>
 
                 <div class="form-row">
@@ -302,7 +404,16 @@
 
                 <div class="input-group">
                     <label for="task-due-date"><i class="fa-solid fa-calendar-days"></i> Due Date</label>
-                    <input type="date" id="task-due-date">
+                    <input type="date" id="task-due-date" oninput="validateDueDate(this)">
+                    <span class="field-error" id="err-task-due-date"></span>
+                    <span class="field-hint" id="hint-task-due-date"></span>
+                </div>
+
+                <div class="input-group">
+                    <label for="task-tags"><i class="fa-solid fa-tags"></i> Tags <span class="label-hint">(comma-separated, max 8)</span></label>
+                    <input type="text" id="task-tags" placeholder="e.g. work, urgent, design, frontend">
+                    <div id="tag-preview" class="tag-preview"></div>
+                    <span class="field-error" id="err-task-tags"></span>
                 </div>
 
                 <div class="modal-actions">
@@ -312,7 +423,7 @@
             </form>
         </div>
     </div>
-    
+
     <script src="app.js"></script>
 </body>
 </html>
